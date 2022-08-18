@@ -1,6 +1,6 @@
 {
   "name": "pkit/phutilities",
-  "type": "project",
+  "type": "library",
   "description": "Generics utilities",
   "keywords": [
     "utilities"
