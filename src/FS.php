@@ -13,7 +13,7 @@ class FS
     while ($file = $directory->read()) {
       if (@dir("$path/$file")) {
         if ($recursive && $file !== '.' && $file !== '..') {
-          if ($result = self::someFile("$path/$file", $map , $recursive)){
+          if ($result = self::someFile("$path/$file", $map, $recursive)) {
             return $result;
           };
         }
@@ -25,5 +25,13 @@ class FS
     }
     $directory->close();
     return false;
+  }
+
+  public static function getExtension(string $file): string
+  {
+    $explode = explode(".", $file);
+    if (str_starts_with($file, ".") == false)
+      unset($explode[0]);
+    return implode(".", $explode);
   }
 }
