@@ -96,7 +96,12 @@ class Validator
             }
 
             try {
-                $resultValidation = call_user_func("is_" . $subSchema, $test[$keySubSchema]);
+                $types = explode("|", $subSchema);
+                $resultValidation = false;
+                foreach ($types as $type) {
+                    $resultValidation = $resultValidation || call_user_func("is_" . $type, $test[$keySubSchema]);
+                    if ($resultValidation) break;
+                }
             } catch (\Throwable) {
                 $textSchema = $this->format($schema);
                 throw new \Exception(
