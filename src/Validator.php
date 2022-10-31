@@ -50,21 +50,32 @@ class Validator
     {
         $errors = [];
         foreach ($schema as $subSchema) {
-            if (is_array($subSchema)) {
-                try {
+            try {
+                if (is_array($subSchema)) {
                     $result = $this->handleValidate($test, $level, $subSchema);
-                } catch (\Throwable $th) {
-                    if ($th->getCode() == -1)
-                        throw $th;
-                    $result = false;
-                    $errors[] = $th->getMessage();
-                }
-                if ($result)
-                    return true;
-            }
 
-            if (in_array($test, $schema))
-                return true;
+                    if ($result)
+                        return true;
+                    continue;
+                }
+
+                try {
+                    if ($this->validateValueOrType($test, $level, $subSchema))
+                        return true;
+                } catch (\Throwable) {
+                    $textSchema = $this->format($schema);
+                    throw new \Exception(
+                        "Validator: $textSchema bad structured ($subSchema is an unsupported validation type)",
+                        -1
+                    );
+                }
+            } catch (\Throwable $th) {
+                if ($th->getCode() == -1)
+                    throw $th;
+                if ($this->isThrowable)
+                    $errors[] = $th->getMessage();
+                $result = false;
+            }
         }
         $path = implode(" => ", [...$level, $this->format($test)]);
         $textSchema = $this->format($schema);
@@ -89,37 +100,74 @@ class Validator
                 return false;
 
         foreach ($schema as $keySubSchema => $subSchema) {
-            if (is_array($subSchema)) {
-                if (!$this->handleValidate($test[$keySubSchema], [...$level, $keySubSchema], $subSchema))
+            if (!key_exists($keySubSchema, $test)) {
+                if ($this->isThrowable) {
+                    $path = implode(" => ", [...$level]);
+                    throw new \Exception(
+                        "Validator: the key '$keySubSchema' not exist in [ $path ]"
+                    );
+                } else
                     return false;
-                continue;
+            }
+
+            if (is_array($subSchema)) {
+                if ($this->handleValidate($test[$keySubSchema], [...$level, $keySubSchema], $subSchema))
+                    continue;
+                return false;
             }
 
             try {
-                $types = explode("|", $subSchema);
-                $resultValidation = false;
-                foreach ($types as $type) {
-                    $resultValidation = $resultValidation || call_user_func("is_" . $type, $test[$keySubSchema]);
-                    if ($resultValidation) break;
-                }
-            } catch (\Throwable) {
+                if ($this->validateValueOrType($test[$keySubSchema], [...$level, $keySubSchema], $subSchema))
+                    continue;
+            } catch (\Throwable $th) {
                 $textSchema = $this->format($schema);
+                if ($th->getCode() == -1)
+                    throw $th;
                 throw new \Exception(
                     "Validator: $textSchema bad structured ($subSchema is an unsupported validation type)",
                     -1
                 );
             }
-            if ($resultValidation == false) {
-                if ($this->isThrowable) {
-                    $path = implode(" => ", [...$level, $keySubSchema]);
-                    throw new \Exception(
-                        "Validator: value '$path' not is a $subSchema"
-                    );
-                } else
-                    return false;
-            }
+
+            if ($this->isThrowable) {
+                $path = implode(" => ", [...$level, $keySubSchema]);
+                throw new \Exception(
+                    "Validator: value [ $path ] not is a $subSchema"
+                );
+            } else
+                return false;
         }
         return true;
+    }
+
+    public function validateValueOrType(mixed $test, array $level, string $subSchema)
+    {
+        if (substr($subSchema, 0, 1) == ":") {
+            if (Text::removeFromStart($test, ":") == $subSchema)
+                return true;
+        } else {
+            if ($this->validType($subSchema, $test))
+                return true;
+            if ($this->isThrowable) {
+                $path = implode(" => ", [...$level, $this->format($test)]);
+                $textSchema = $this->format($subSchema);
+                throw new \Exception(
+                    "Validator: value [ $path ]  not is valid in schema $textSchema",
+                );
+            } else
+                return false;
+        }
+    }
+
+    public function validType(mixed $schema, $value)
+    {
+        $types = explode("|", $schema);
+        $resultValidation = false;
+        foreach ($types as $type) {
+            $resultValidation = $resultValidation || call_user_func("is_" . $type, $value);
+            if ($resultValidation) break;
+        }
+        return $resultValidation;
     }
 
     public function format(mixed $schema)
