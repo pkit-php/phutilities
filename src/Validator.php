@@ -92,7 +92,7 @@ class Validator
             if (is_array($subSchema)) {
                 if (!$this->handleValidate($test[$keySubSchema], [...$level, $keySubSchema], $subSchema))
                     return false;
-                break;
+                continue;
             }
 
             try {
