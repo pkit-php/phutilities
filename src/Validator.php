@@ -92,6 +92,17 @@ class Validator
             } else
                 return false;
 
+        if (count($test) !== count($schema))
+            if ($this->isThrowable) {
+                $testFormat = $this->format($test);
+                $path = implode(" => ", [...$level, $testFormat]);
+                $textSchema = $this->format($schema);
+                throw new \Exception(
+                    "Validator: value [ $path ] does not have the same amount of keys as schema $textSchema"
+                );
+            } else
+                return false;
+
         foreach ($schema as $keySubSchema => $subSchema) {
             if (!key_exists($keySubSchema, $test)) {
                 if ($this->isThrowable) {
