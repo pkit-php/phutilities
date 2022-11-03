@@ -139,7 +139,7 @@ class Validator
         return true;
     }
 
-    public function validateValueOrType(mixed $test, array $level, string $subSchema)
+    public function validateValueOrType(mixed $test, array $level, mixed $subSchema)
     {
         if (!is_string($subSchema)) {
             if ($subSchema === $test)
@@ -163,7 +163,7 @@ class Validator
             return false;
     }
 
-    public function validType(mixed $schema, $value)
+    public function validType(string $schema, mixed $value)
     {
         $types = explode("|", $schema);
         $resultValidation = false;
