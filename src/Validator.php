@@ -85,7 +85,8 @@ class Validator
     {
         if (!is_array($test))
             if ($this->isThrowable) {
-                $path = implode(" => ", $level);
+                $testFormat = $this->format($test);
+                $path = implode(" => ", [...$level, $testFormat]);
                 throw new \Exception(
                     "Validator: value of [ $path ]  not is a array"
                 );
@@ -106,7 +107,8 @@ class Validator
         foreach ($schema as $keySubSchema => $subSchema) {
             if (!key_exists($keySubSchema, $test)) {
                 if ($this->isThrowable) {
-                    $path = implode(" => ", [...$level]);
+                    $testFormat = $this->format($test);
+                    $path = implode(" => ", [...$level, $testFormat]);
                     throw new \Exception(
                         "Validator: the key '$keySubSchema' not exist in [ $path ]"
                     );
@@ -126,7 +128,8 @@ class Validator
 
 
             if ($this->isThrowable) {
-                $path = implode(" => ", [...$level, $keySubSchema]);
+                $testFormat = $this->format($test);
+                $path = implode(" => ", [...$level, $testFormat]);
                 throw new \Exception(
                     "Validator: value [ $path ] not is a $subSchema"
                 );
