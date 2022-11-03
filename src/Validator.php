@@ -59,16 +59,9 @@ class Validator
                     continue;
                 }
 
-                try {
-                    if ($this->validateValueOrType($test, $level, $subSchema))
-                        return true;
-                } catch (\Throwable) {
-                    $textSchema = $this->format($schema);
-                    throw new \Exception(
-                        "Validator: $textSchema bad structured ($subSchema is an unsupported validation type)",
-                        -1
-                    );
-                }
+
+                if ($this->validateValueOrType($test, $level, $subSchema))
+                    return true;
             } catch (\Throwable $th) {
                 if ($th->getCode() == -1)
                     throw $th;
@@ -116,18 +109,10 @@ class Validator
                 return false;
             }
 
-            try {
-                if ($this->validateValueOrType($test[$keySubSchema], [...$level, $keySubSchema], $subSchema))
-                    continue;
-            } catch (\Throwable $th) {
-                $textSchema = $this->format($schema);
-                if ($th->getCode() == -1)
-                    throw $th;
-                throw new \Exception(
-                    "Validator: $textSchema bad structured ($subSchema is an unsupported validation type)",
-                    -1
-                );
-            }
+
+            if ($this->validateValueOrType($test[$keySubSchema], [...$level, $keySubSchema], $subSchema))
+                continue;
+
 
             if ($this->isThrowable) {
                 $path = implode(" => ", [...$level, $keySubSchema]);
@@ -142,21 +127,26 @@ class Validator
 
     public function validateValueOrType(mixed $test, array $level, string $subSchema)
     {
-        if (substr($subSchema, 0, 1) == ":") {
-            if (Text::removeFromStart($test, ":") == $subSchema)
+        if (!is_string($subSchema)) {
+            if ($subSchema === $test)
                 return true;
         } else {
-            if ($this->validType($subSchema, $test))
-                return true;
-            if ($this->isThrowable) {
-                $path = implode(" => ", [...$level, $this->format($test)]);
-                $textSchema = $this->format($subSchema);
-                throw new \Exception(
-                    "Validator: value [ $path ]  not is valid in schema $textSchema",
-                );
-            } else
-                return false;
+            if (substr($subSchema, 0, 1) == ":") {
+                if (Text::removeFromStart($test, ":") == $subSchema)
+                    return true;
+            } else {
+                if ($this->validType($subSchema, $test))
+                    return true;
+            }
         }
+
+        if ($this->isThrowable) {
+            $path = implode(" => ", [...$level, $this->format($test)]);
+            throw new \Exception(
+                "Validator: value [ $path ]  not is valid in schema $subSchema",
+            );
+        } else
+            return false;
     }
 
     public function validType(mixed $schema, $value)
@@ -164,7 +154,15 @@ class Validator
         $types = explode("|", $schema);
         $resultValidation = false;
         foreach ($types as $type) {
-            $resultValidation = $resultValidation || call_user_func("is_" . $type, $value);
+            try {
+                $resultValidation = call_user_func("is_" . $type, $value);
+            } catch (\Throwable) {
+                $textSchema = $this->format($schema);
+                throw new \Exception(
+                    "Validator: $textSchema bad structured ($schema is an unsupported validation type)",
+                    -1
+                );
+            }
             if ($resultValidation) break;
         }
         return $resultValidation;
