@@ -28,16 +28,24 @@ class Validator
         }
 
         $is_numeric = null;
-        array_map(function ($key) use (&$is_numeric, $schema) {
-            if (is_null($is_numeric)) {
-                $is_numeric = is_numeric($key);
-            } else {
-                if ($is_numeric !== is_numeric($key)) {
+        $is_especial_key = null;
+        array_map(function ($key) use (&$is_numeric, &$is_especial_key, $schema) {
+            if (is_string($key)) {
+                if (is_null($is_especial_key))
+                    $is_especial_key = substr($key, 0, 1) == "@";
+                else if ($is_especial_key !== (substr($key, 0, 1) == "@") || $is_numeric) {
                     $textSchema = $this->format($schema);
                     throw new \Exception(
-                        "Validator: $textSchema bad structured (array can contain only values ​​or keys and values)"
+                        "Validator: $textSchema bad structured (array can contain only values or keys and values or especial keys)"
                     );
                 }
+            } else if (is_null($is_numeric)) {
+                $is_numeric = is_numeric($key);
+            } else if ($is_numeric !== is_numeric($key) || $is_especial_key) {
+                $textSchema = $this->format($schema);
+                throw new \Exception(
+                    "Validator: $textSchema bad structured (array can contain only values or keys and values or especial keys)"
+                );
             }
         }, array_keys($schema));
 
