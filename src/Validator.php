@@ -205,7 +205,7 @@ class Validator
         return true;
     }
 
-    public function validateValueOrType(mixed $test, array $level, mixed $subSchema)
+    public function validateValueOrType(mixed $test, array $level, string|array $subSchema)
     {
         if (!is_string($subSchema)) {
             if ($subSchema === $test)
@@ -222,8 +222,11 @@ class Validator
 
         if ($this->isThrowable) {
             $path = implode(" => ", [...$level, $this->format($test)]);
+            if (is_array($subSchema)) {
+                $subSchema = implode(", ", $subSchema);
+            }
             throw new \Exception(
-                "Validator: value [ $path ]  not is valid in schema $subSchema",
+                "Validator: value [ $path ]  not is valid in schema [ $subSchema ]",
             );
         } else
             return false;
@@ -243,7 +246,8 @@ class Validator
                     -1
                 );
             }
-            if ($resultValidation) break;
+            if ($resultValidation)
+                break;
         }
         return $resultValidation;
     }
