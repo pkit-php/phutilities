@@ -49,9 +49,67 @@ class Validator
             }
         }, array_keys($schema));
 
+        if ($is_especial_key)
+            return $this->validateEspecialKeys($test, $level, $schema);
         if ($is_numeric)
             return $this->validateOnlyValues($test, $level, $schema);
         return $this->validateKeysAndValues($test, $level, $schema);
+    }
+
+    private function validateEspecialKeys(mixed $test, array $level, array $schema)
+    {
+        $supportedSchemas = ["@array"];
+        $usedArraySchema = false;
+        foreach ($schema as $especialSchema => $subSchema) {
+            if (!in_array($especialSchema, $supportedSchemas)) {
+                $textSchema = $this->format($schema);
+                throw new \Exception(
+                    "Validator: $textSchema bad structured ($especialSchema is an unsupported especial key)",
+                    -1
+                );
+            }
+
+            if ($especialSchema == "@array") {
+
+                if ($usedArraySchema)
+                    if ($this->isThrowable) {
+                        $testFormat = $this->format($test);
+                        $path = implode(" => ", [...$level, $testFormat]);
+                        $textSchema = $this->format($schema);
+                        throw new \Exception(
+                            "Validator: value [ $path ] does not have the same amount of keys as schema $textSchema"
+                        );
+                    } else
+                        return false;
+
+                if (!is_array($test))
+                    if ($this->isThrowable) {
+                        $testFormat = $this->format($test);
+                        $path = implode(" => ", [...$level, $testFormat]);
+                        $textSchema = $this->format($schema);
+                        throw new \Exception(
+                            "Validator: value [ $path ] does not have the same amount of keys as schema $textSchema"
+                        );
+                    } else
+                        return false;
+
+                foreach ($test as $key => $value) {
+                    if (!is_numeric($key)) {
+                        return false;
+                    }
+
+                    if (is_array($subSchema)) {
+                        if (!$this->handleValidate($value, [...$level, $key], $subSchema))
+                            return false;
+                    } else {
+                        if (!$this->validateValueOrType($value, [...$level, $key], $subSchema))
+                            return false;
+                    }
+                }
+                $usedArraySchema = true;
+            }
+        }
+        return true;
     }
 
     private function validateOnlyValues(mixed $test, array $level, array $schema)
